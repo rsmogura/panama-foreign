@@ -8,6 +8,7 @@ import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.MemorySegment;
 import jdk.incubator.foreign.ResourceScope;
 import jdk.incubator.vector.ByteVector;
+import jdk.incubator.vector.Vector;
 import jdk.incubator.vector.VectorShuffle;
 import jdk.incubator.vector.VectorSpecies;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -47,8 +48,9 @@ public class VectorCopySegments {
 
   private final static VectorShuffle<Byte> byteSwap;
 
+  private static final int[] shuffleArr;
   static {
-    int[] shuffleArr = new int[BYTE_VECTOR_SPECIES.length()];
+    shuffleArr = new int[BYTE_VECTOR_SPECIES.length()];
     for (int i = 0; i < shuffleArr.length; i++) {
       shuffleArr[i] = (i / 4) * 4 + 4 - (i % 4) - 1;
     }
@@ -88,7 +90,9 @@ public class VectorCopySegments {
   }
 
   @Benchmark
+//  @CompilerControl(CompilerControl.Mode.PRINT)
   public void copyWithVectorShuffle() {
+    final var byteSwapVector = byteSwap.toVector();
     try (final var scope = ResourceScope.newConfinedScope()) {
       final var src = srcAddress.asSegment(size, scope).asByteBuffer();
       final var dst = dstAddress.asSegment(size, scope).asByteBuffer();
@@ -97,8 +101,8 @@ public class VectorCopySegments {
       final var bound = BYTE_VECTOR_SPECIES.loopBound(size);
 
       for (int i=0; i < bound; i += lanes) {
-        final var srcVector = ByteVector.fromByteBuffer(BYTE_VECTOR_SPECIES, src, i, ByteOrder.nativeOrder());
-        final var dstVector = srcVector.rearrange(byteSwap);
+        final var srcVector =  ByteVector.fromByteBuffer(BYTE_VECTOR_SPECIES, src, i, ByteOrder.nativeOrder());
+        final var dstVector = byteSwapVector.selectFrom(srcVector);
 
         dstVector.intoByteBuffer(dst, i, ByteOrder.nativeOrder());
       }
