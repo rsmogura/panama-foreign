@@ -760,8 +760,6 @@ bool LibraryCallKit::inline_vector_mem_operation(bool is_store) {
   SafePointNode* old_map = clone_map();
 
   Node* addr = make_unsafe_address(base, offset, (is_mask ? T_BOOLEAN : elem_bt), true);
-  // Can base be NULL? Otherwise, always on-heap access.
-  bool can_access_non_heap = TypePtr::NULL_PTR->higher_equal(gvn().type(base));
 
   const TypePtr *addr_type = gvn().type(addr)->isa_ptr();
   const TypeAryPtr* arr_type = addr_type->isa_aryptr();
@@ -823,10 +821,6 @@ bool LibraryCallKit::inline_vector_mem_operation(bool is_store) {
 
   const TypeInstPtr* vbox_type = TypeInstPtr::make_exact(TypePtr::NotNull, vbox_klass);
 
-  if (can_access_non_heap) {
-    insert_mem_bar(Op_MemBarCPUOrder);
-  }
-
   if (is_store) {
     Node* val = unbox_vector(argument(6), vbox_type, elem_bt, num_elem);
     if (val == NULL) {
@@ -869,10 +863,6 @@ bool LibraryCallKit::inline_vector_mem_operation(bool is_store) {
   }
 
   old_map->destruct(&_gvn);
-
-  if (can_access_non_heap) {
-    insert_mem_bar(Op_MemBarCPUOrder);
-  }
 
   C->set_max_vector_size(MAX2(C->max_vector_size(), (uint)(num_elem * type2aelembytes(elem_bt))));
   return true;
