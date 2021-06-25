@@ -875,8 +875,15 @@ bool IdealLoopTree::policy_unroll(PhaseIdealLoop *phase) {
     if ((future_unroll_cnt / unroll_constraint) > LoopMaxUnroll) return false;
   }
 
-  // Check for initial stride being a small enough constant
-  if (abs(cl->stride_con()) > (1<<2)*future_unroll_cnt) return false;
+  if (!LoopUnrollAggressiveStrideLimit) {
+    // Check for initial stride being a small enough constant
+    if (abs(cl->stride_con()) > (1<<2)*future_unroll_cnt) return false;
+  } else {
+    // Prevent overflow when calculating new stride
+    if ((abs(cl->stride_con())) >  max_jint / 2 - 2) {
+      return false;
+    }
+  }
 
   // Don't unroll if the next round of unrolling would push us
   // over the expected trip count of the loop.  One is subtracted
@@ -2002,7 +2009,9 @@ void PhaseIdealLoop::do_unroll(IdealLoopTree *loop, Node_List &old_new, bool adj
   uint old_trip_count = loop_head->trip_count();
   // Verify that unroll policy result is still valid.
   assert(old_trip_count > 1 &&
-      (!adjust_min_trip || stride_p <= (1<<3)*loop_head->unrolled_count()), "sanity");
+      (!adjust_min_trip || 
+        (LoopUnrollAggressiveStrideLimit && stride_p <= max_jint / 2 - 2) ||
+        (!LoopUnrollAggressiveStrideLimit && stride_p <= stride_p <= (1<<3)*loop_head->unrolled_count())), "sanity");
 
   update_main_loop_skeleton_predicates(ctrl, loop_head, init, stride_con);
 

@@ -174,6 +174,11 @@
           "Unroll loop bodies with node count less than this")              \
           range(0, max_jint / 4)                                            \
                                                                             \
+  product(bool,  LoopUnrollAggressiveStrideLimit, true, EXPERIMENTAL,       \
+          "Use aggressive conditions for checking loop stride size, "       \
+          "allowing larger strides ")                                       \
+          range(0, max_jint / 4)                                            \
+                                                                            \
   product_pd(intx, LoopPercentProfileLimit,                                 \
              "Unroll loop bodies with % node count of profile limit")       \
              range(10, 100)                                                 \
